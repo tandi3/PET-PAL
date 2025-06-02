@@ -1,6 +1,5 @@
 from lib.db.connection import CONN, CURSOR
-from lib.models.owner import Owner
-from lib.models.pet import Pet
+from lib.db.models.pet import Pet
 
 Owner.CONN = CONN
 Owner.CURSOR = CURSOR
