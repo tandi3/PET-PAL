@@ -1,6 +1,6 @@
 import sqlite3
 
-CONN = sqlite3.connect('lib/db/petpal.db')
+CONN = sqlite3.connect('pet_pal.db')
 CURSOR = CONN.cursor()
 
 # Enable foreign key constraints

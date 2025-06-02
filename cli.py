@@ -3,6 +3,12 @@ from lib.db.models.owner import Owner
 from lib.db.models.pet import Pet
 from tabulate import tabulate
 
+
+Owner.CONN = CONN
+Owner.CURSOR = CURSOR
+Pet.CONN = CONN
+Pet.CURSOR = CURSOR
+
 def add_owner():
     name = input("Enter owner's name: ")
     owner = Owner(name)
@@ -13,18 +19,41 @@ def add_pet():
     name = input("Enter pet's name: ")
     pet_type = input("Enter pet type: ")
     owner_id = input("Enter owner ID: ")
-    pet = Pet(name, pet_type, owner_id)
+
+    try:
+        owner = Owner.find_by_id(int(owner_id))
+    except ValueError:
+        print("Invalid ID format.")
+        return
+
+    if not owner:
+        print("Owner not found.")
+        return
+
+    pet = Pet(name=name, pet_type=pet_type, owner_id=owner.id)
     pet.save()
-    print(f"Pet '{name}' added for Owner ID {owner_id}.")
+    print(f"Pet '{name}' added for owner '{owner.name}'.")
 
 def show_pets_for_owner():
     owner_id = input("Enter Owner ID to view their pets: ")
-    pets = Pet.find_by_owner_id(owner_id)
+
+    try:
+        owner = Owner.find_by_id(int(owner_id))
+    except ValueError:
+        print("Invalid ID format.")
+        return
+
+    if not owner:
+        print("Owner not found.")
+        return
+
+    pets = Pet.find_by_owner_id(owner.id)
+
     if pets:
-        for pet in pets:
-            print(f"Pet ID: {pet.id}, Name: {pet.name}, Type: {pet.pet_type}")
+        data = [(pet.id, pet.name, pet.pet_type) for pet in pets]
+        print(tabulate(data, headers=["Pet ID", "Name", "Type"], tablefmt="fancy_grid"))
     else:
-        print("No pets found for this owner.")
+        print(f"{owner.name} has no pets yet.")
 
 def show_owners_and_pets():
     query = """
@@ -37,18 +66,22 @@ def show_owners_and_pets():
     results = CURSOR.fetchall()
 
     if results:
-        print(tabulate(results, headers=["Owner ID", "Owner Name", "Pet ID", "Pet Name", "Pet Type"], tablefmt="grid"))
+        print(tabulate(
+            results,
+            headers=["Owner ID", "Owner Name", "Pet ID", "Pet Name", "Pet Type"],
+            tablefmt="grid"
+        ))
     else:
         print("No owners or pets found.")
 
-def main_menu():
+def run():
     while True:
         print("\nPetPal Menu")
         print("1. Add Owner")
         print("2. Add Pet")
         print("3. Show Pets for an Owner")
-        print("4. Exit")
-        print("5. Show All Owners and Pets")  # new option added
+        print("4. Show All Owners and Pets")
+        print("5. Exit")
 
         choice = input("Select an option: ")
 
@@ -60,12 +93,13 @@ def main_menu():
             show_pets_for_owner()
         elif choice == "4":
             show_owners_and_pets()
-            break
         elif choice == "5":
             print("Exiting PetPal. Bye!")
+            break
         else:
-            print("Invalid option, please try again.")
+            print("Invalid option. Please try again.")
+
+    CONN.close()
 
 if __name__ == "__main__":
-    main_menu()
-
+    run()
