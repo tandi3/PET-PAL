@@ -99,7 +99,7 @@ def run():
         else:
             print("Invalid option. Please try again.")
 
-    CONN.close()
+     CONN.close()
 
 if __name__ == "__main__":
     run()
