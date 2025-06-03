@@ -1,5 +1,5 @@
 from lib.db.connection import setup_db
-from lib.models.owner import Owner
+from lib.db.models.owner import Owner
 from lib.models.pet import Pet
 
 def main():
@@ -22,7 +22,7 @@ def main():
         print(f"Oops! {e}")
 
     print("\nYour pets:")
-    for pet in owner.pets():
+    for pet in owner.pets:
         print(pet)
 
 if __name__ == "__main__":

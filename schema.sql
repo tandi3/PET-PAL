@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS pets;
 
 CREATE TABLE owners (
     id INTEGER PRIMARY KEY,
-    name TEXT
+    name TEXT NOT NULL
 );
 
 CREATE TABLE pets (

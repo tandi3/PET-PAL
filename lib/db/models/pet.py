@@ -1,89 +1,68 @@
-from lib.db.connection import CONN, CURSOR
-from lib.db.models.pet import Pet
+from lib.db.connection import CURSOR, CONN
 
-Owner.CONN = CONN
-Owner.CURSOR = CURSOR
-Pet.CONN = CONN
-Pet.CURSOR = CURSOR
+class Pet:
+    VALID_TYPES = ['dog', 'cat', 'bird', 'fish', 'lizard', 'hamster']
 
+    def __init__(self, name, pet_type, owner_id=None, id=None):
+        self.id = id
+        self.name = name
+        self.pet_type = pet_type
+        self.owner_id = owner_id
 
-def menu():
-    print("\nPetPal Menu")
-    print("1. Add Owner")
-    print("2. Add Pet")
-    print("3. Show Pets for an Owner")
-    print("4. Exit")
+    @property
+    def pet_type(self):
+        return self._pet_type
 
-def add_owner():
-    name = input("Enter owner's name: ")
-    owner = Owner(name)
-    owner.save()
-    print(f"Owner '{owner.name}' added with ID {owner.id}.")
+    @pet_type.setter
+    def pet_type(self, value):
+        if value.lower() not in Pet.VALID_TYPES:
+            raise ValueError(f"{value} is not a valid pet type.")
+        self._pet_type = value.lower()
 
-def add_pet():
-    name = input("Enter pet's name: ")
-    pet_type = input("Enter pet type: ")
-    owner_id = input("Enter owner ID: ")
-
-    try:
-        owner = Owner.find_by_id(int(owner_id))
-    except ValueError:
-        print("Invalid ID format.")
-        return
-
-    if not owner:
-        print("Owner not found.")
-        return
-    
-    pet = Pet(name=name, pet_type=pet_type, owner_id=owner.id)
-    pet.save()
-    print(f"Pet '{pet.name}' added for Owner '{owner.name}'.")
-
-def show_pets_for_owner():
-    owner_id = input("Enter owner ID: ")
-
-    try:
-        owner = Owner.find_by_id(int(owner_id))
-    except ValueError:
-        print("Invalid ID format.")
-        return
-
-    if not owner:
-        print("Owner not found.")
-        return
-
-    pets = owner.pets()
-    if pets:
-        print(f"Pets for {owner.name}:")
-        for pet in pets:
-            print(f"- {pet.name} ({pet.pet_type})")
-    else:
-        print(f"{owner.name} has no pets yet.")
-
-def run():
-    while True:
-        print("\nPetPal Menu")
-        print("1. Add Owner")
-        print("2. Add Pet")
-        print("3. Show Pets for an Owner")
-        print("4. Exit")
-
-        choice = input("Choose an option: ")
-
-        if choice == "1":
-            add_owner()
-        elif choice == "2":
-            add_pet()
-        elif choice == "3":
-            show_pets_for_owner()
-        elif choice == "4":
-            print("Goodbye!")
-            CONN.close()
-            break
+    def save(self):
+        if self.id:
+            CURSOR.execute(
+                "UPDATE pets SET name = ?, pet_type = ?, owner_id = ? WHERE id = ?",
+                (self.name, self.pet_type, self.owner_id, self.id)
+            )
         else:
-            print("Invalid choice.")
+            CURSOR.execute(
+                "INSERT INTO pets (name, pet_type, owner_id) VALUES (?, ?, ?)",
+                (self.name, self.pet_type, self.owner_id)
+            )
+            self.id = CURSOR.lastrowid
+        CONN.commit()
 
-    CONN.close()    
+    def delete(self):
+        CURSOR.execute("DELETE FROM pets WHERE id = ?", (self.id,))
+        CONN.commit()
 
-if __name__ == "__main__":
-    run()
+    def get_owner(self):
+        from lib.db.models.owner import Owner
+        return Owner.find_by_id(self.owner_id)
+
+    @classmethod
+    def instance_from_db(cls, row):
+        id, name, pet_type, owner_id = row
+        return cls(name, pet_type, owner_id, id)
+
+    @classmethod
+    def get_all(cls):
+        CURSOR.execute("SELECT * FROM pets")
+        rows = CURSOR.fetchall()
+        return [cls.instance_from_db(row) for row in rows]
+
+    @classmethod
+    def find_by_id(cls, id):
+        CURSOR.execute("SELECT * FROM pets WHERE id = ?", (id,))
+        row = CURSOR.fetchone()
+        return cls.instance_from_db(row) if row else None
+
+    @classmethod
+    def find_by_owner_id(cls, owner_id):
+        CURSOR.execute("SELECT * FROM pets WHERE owner_id = ?", (owner_id,))
+        rows = CURSOR.fetchall()
+        return [cls.instance_from_db(row) for row in rows]
+
+    def __repr__(self):
+        return f"<Pet {self.id}: {self.name} the {self.pet_type}>"
